@@ -2,8 +2,8 @@ import pyautogui
 import time
 
 # --- CONFIG ---
-TEMPO_PARA_UPAR = 20
-DELAY_POS_RESET = 5
+TEMPO_PARA_UPAR = 5
+DELAY_POS_RESET = 3
 
 comandos_sobrevivencia = ["/a 1400", "/f 1000", "/e 4000", "/v 500"]
 comandos_upar = ["/a 0", "/f 200", "/e 300", "/v 100"]
@@ -25,7 +25,6 @@ ja_aplicou_sobrevivencia = False
 try:
     while True:
 
-        # UPAR
         print("[*] Upando...")
         time.sleep(TEMPO_PARA_UPAR)
 
@@ -39,7 +38,6 @@ try:
         # espera resposta do server
         time.sleep(2)
 
-        # AQUI É A LÓGICA:
         # sempre que tenta reset → considera novo ciclo
         print("[*] Aguardando possível respawn...")
         time.sleep(DELAY_POS_RESET)
