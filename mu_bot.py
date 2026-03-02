@@ -4,10 +4,17 @@ import time
 # --- CONFIG ---
 TEMPO_PARA_UPAR = 5
 DELAY_POS_RESET = 3
-TEMPO_ENTRE_RESETS = 360  # ⏱️ 6 minutos (360 segundos)
 
-comandos_sobrevivencia = ["/a 1400", "/f 1000", "/e 4000", "/v 500"]
-comandos_upar = ["/a 0", "/f 200", "/e 300", "/v 100"]
+# reset
+INTERVALO_RESET = 10 * 60   # 13 minutos
+
+# /a
+LIMITE_A = 3800
+INCREMENTO_A = 400
+
+# comandos
+comandos_loop = ["/f 3000", "/e 6000", "/v 1500"]   # boost inicial
+comandos_upar = ["/a 0", "/f 200", "/e 300", "/v 100"]  # ciclos normais
 
 def enviar(cmd):
     pyautogui.press("enter")
@@ -17,53 +24,60 @@ def enviar(cmd):
     pyautogui.press("enter")
     time.sleep(0.4)
 
-print(">>> BOT AUTO RESET SIMPLES <<<")
+print(">>> BOT AUTO RESET SINCRONIZADO <<<")
 print("Clique no MU. Iniciando em 5s...")
 time.sleep(5)
 
-ja_aplicou_sobrevivencia = False
-ultimo_reset = 0  # marca tempo do último reset
+valor_a = 0
+primeiro_ciclo = True
+ultimo_reset = 0
 
 try:
     while True:
 
-        # UPAR
         print("[*] Upando...")
         time.sleep(TEMPO_PARA_UPAR)
 
-        for cmd in comandos_upar:
-            enviar(cmd)
-
-        # CONTROLE DE TEMPO (6 MINUTOS)
         agora = time.time()
-        if agora - ultimo_reset < TEMPO_ENTRE_RESETS:
-            restante = int(TEMPO_ENTRE_RESETS - (agora - ultimo_reset))
-            print(f"[*] Aguardando {restante}s para próximo reset...")
-            time.sleep(5)
-            continue
 
-        # RESET
-        print("[!] Tentando reset...")
-        enviar("/reset")
-        ultimo_reset = time.time()  # marca horário do reset
+        # -------- RESET CONTROLADO --------
+        if agora - ultimo_reset >= INTERVALO_RESET:
+            print("[!] RESET EXECUTADO (16 min)")
+            enviar("/reset")
+            ultimo_reset = agora
 
-        # espera resposta do server
-        time.sleep(2)
+            # 🔥 sincroniza estado com o jogo
+            valor_a = 0
+            primeiro_ciclo = True
 
-        print("[*] Aguardando possível respawn...")
-        time.sleep(DELAY_POS_RESET)
+            time.sleep(DELAY_POS_RESET)
+        else:
+            restante = int(INTERVALO_RESET - (agora - ultimo_reset))
+            print(f"[=] Reset bloqueado, faltam {restante}s")
 
-        # aplica sobrevivência UMA vez por reset
-        if not ja_aplicou_sobrevivencia:
-            print("[+] Aplicando sobrevivência pós-reset...")
-            for cmd in comandos_sobrevivencia:
+        # -------- /A INCREMENTAL --------
+        if valor_a < LIMITE_A:
+            incremento = min(INCREMENTO_A, LIMITE_A - valor_a)
+            valor_a += incremento
+            print(f"[+] Incrementando /a em +{incremento} → total {valor_a}")
+            enviar(f"/a {incremento}")
+        else:
+            print("[=] /a no limite (3800). Ignorado.")
+
+        # -------- PONTOS --------
+        if primeiro_ciclo:
+            print("[+] Primeiro ciclo pós-reset: boost inicial")
+            for cmd in comandos_loop:
                 enviar(cmd)
-            ja_aplicou_sobrevivencia = True
+            primeiro_ciclo = False
+        else:
+            print("[+] Ciclo normal: upar padrão")
+            for cmd in comandos_upar:
+                if cmd.startswith("/a"):  # /a já é controlado acima
+                    continue
+                enviar(cmd)
 
         enviar("/zen")
-
-        # libera próximo ciclo
-        ja_aplicou_sobrevivencia = False
 
 except KeyboardInterrupt:
     print("\n[!] Script encerrado.")
